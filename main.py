@@ -54,7 +54,7 @@ def selectCMD(bot, update):
 		logDB(str(update.message.text),tmpData,update.message.from_user.id)
 
 def logCMD(bot,update):
-	if update.message.chat.id in adminID:	
+	if update.message.from_user.id in adminID:	
 		conn = sqlite3.connect("log.db")
 		cursor = conn.cursor()	
 		cursor.execute("SELECT * FROM commandLog ORDER BY commandServerTime DESC Limit 10")
