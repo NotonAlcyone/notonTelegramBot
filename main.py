@@ -1,5 +1,6 @@
 from telegram.ext import *
 from privateData import *
+from bs4 import BeautifulSoup
 import random
 import sqlite3
 import time
@@ -72,13 +73,18 @@ def logCMD(bot,update):
 	
 
 def weatherCMD(bot,update):
-	response = requests.get(weatherURL)
-	testData = json.loads(response.text)
+	#response = requests.get(weatherURL)
+	#testData = json.loads(response.text)
+	naverWeatherResponse = requests.get(naverWeatherURL)
+	naverWeatherData = BeautifulSoup(naverWeatherResponse.text,'html.parser')
 
-	if response.status_code == 200 and testData["cod"] == 200:
-		tempMin = str(int(testData["main"]["temp_min"] - 273.15))
-		tempMax = str(int(testData["main"]["temp_max"] - 273.15))
-		bot.send_message(update.message.chat_id,"현재 서울의 온도는 " +tempMin+"℃ ~ "+tempMax+ "℃ 입니다.")
+	if naverWeatherResponse.status_code == 200 :
+		#tempMin = str(int(testData["main"]["temp_min"] - 273.15))
+		#tempMax = str(int(testData["main"]["temp_max"] - 273.15))
+		tmpTemp = naverWeatherData.select("span.todaytemp")
+		tmpDust = naverWeatherData.select("dd.lv3")
+		#bot.send_message(update.message.chat_id,"현재 서울의 온도는 " +tempMin+"℃ ~ "+tempMax+ "℃ 입니다.")
+		bot.send_message(update.message.chat_id,"현재 서울 기온은 "+tmpTemp[0].text +"℃ 입니다.\n"+"미세먼지: "+tmpDust[0].text+" 입니다."+"\n초미세먼지: "+tmpDust[1].text+" 입니다.")
 		logDB(str(update.message.text),"날씨 데이터 조회 ",update.message.from_user.id)
 
 	else:
