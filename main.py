@@ -3,7 +3,8 @@ from privateData import *
 import random
 import sqlite3
 import time
-
+import requests
+import json
 
 
 updater = Updater(botToken)
@@ -70,6 +71,20 @@ def logCMD(bot,update):
 		logDB(str(update.message.text),"log Request rejected",update.message.from_user.id)
 	
 
+def weatherCMD(bot,update):
+	response = requests.get(weatherURL)
+	testData = json.loads(response.text)
+
+	if response.status_code == 200 and testData["cod"] == 200:
+		tempMin = str(int(testData["main"]["temp_min"] - 273.15))
+		tempMax = str(int(testData["main"]["temp_max"] - 273.15))
+		bot.send_message(update.message.chat_id,"현재 서울의 온도는 " +tempMin+"℃ ~ "+tempMax+ "℃ 입니다.")
+		logDB(str(update.message.text),"날씨 데이터 조회 ",update.message.from_user.id)
+
+	else:
+		bot.send_message(update.message.chat_id,"현재 날씨 조회 불가능")
+		logDB(str(update.message.text),"날씨 조회 거절",update.message.from_user.id)
+
 def logDB(command,answer,commandUser):
 	
 	conn = sqlite3.connect("log.db")
@@ -86,16 +101,19 @@ def logDB(command,answer,commandUser):
 	conn.commit()
 	conn.close()
 
+
 #updater.dispatcher.add_handler(MessageHandler(Filters.text, get_message))
 #updater.dispatcher.add_handler(MessageHandler(Filters.chat(adminID[0]), getAdmin))
 cmdHelp = CommandHandler(["help","HELP"],helpCMD)
 cmdDice = CommandHandler(["dice","DICE"],diceCMD)
 cmdSelect = CommandHandler(["select","Select"],selectCMD)
+cmdWeather = CommandHandler(["weather","Weather"],weatherCMD)
 cmdLog = CommandHandler(["log","LOG"],logCMD)
 updater.dispatcher.add_handler(cmdHelp)
 updater.dispatcher.add_handler(cmdDice)
 updater.dispatcher.add_handler(cmdSelect)
 updater.dispatcher.add_handler(cmdLog)
+updater.dispatcher.add_handler(cmdWeather)
 
 updater.start_polling(timeout=3, clean=True)
 updater.idle()
