@@ -79,11 +79,9 @@ def logDB(command,answer,commandUser):
 	print("-------------------")
 	print(command)
 	print(answer)
-
-	#print(commandUser)
-	#print("INSERT INTO commandLog VALUES('"+str(command)+"'," + str(int(time.time())) + ",'"+str(answer)+"',"+str(commandUser)+")")
-
-	cursor.execute("INSERT INTO commandLog VALUES('"+str(command)+"', " + str(int(time.time())) + ",'"+str(answer)+"', "+str(commandUser)+")")
+	
+	logTmp = (command, int(time.time()),answer,commandUser)
+	cursor.execute("INSERT INTO commandLog VALUES(?,?,?,?)",logTmp)
 	#print("dose is on")
 	conn.commit()
 	conn.close()
