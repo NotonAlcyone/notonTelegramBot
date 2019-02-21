@@ -6,10 +6,11 @@ import sqlite3
 import time
 import requests
 import json
-
+import threading
 
 updater = Updater(botToken)
- 
+tempData = ""
+dustData = ""
 
 """
 def get_message(bot, update) : #echo
@@ -73,23 +74,13 @@ def logCMD(bot,update):
 	
 
 def weatherCMD(bot,update):
-	#response = requests.get(weatherURL)
-	#testData = json.loads(response.text)
-	naverWeatherResponse = requests.get(naverWeatherURL)
-	naverWeatherData = BeautifulSoup(naverWeatherResponse.text,'html.parser')
-
-	if naverWeatherResponse.status_code == 200 :
-		#tempMin = str(int(testData["main"]["temp_min"] - 273.15))
-		#tempMax = str(int(testData["main"]["temp_max"] - 273.15))
-		tmpTemp = naverWeatherData.select("span.todaytemp")
-		tmpDust = naverWeatherData.select("dd.lv3")
-		#bot.send_message(update.message.chat_id,"현재 서울의 온도는 " +tempMin+"℃ ~ "+tempMax+ "℃ 입니다.")
-		bot.send_message(update.message.chat_id,"현재 서울 기온은 "+tmpTemp[0].text +"℃ 입니다.\n"+"미세먼지: "+tmpDust[0].text+" 입니다."+"\n초미세먼지: "+tmpDust[1].text+" 입니다.")
+	try:
+		weatherAnswer = weatherData(False)
+		bot.send_message(update.message.chat_id,"현재 서울 기온은 "+weatherAnswer[0] +"℃ 입니다.\n"+"미세먼지: "+weatherAnswer[1]+" 입니다."+"\n초미세먼지: "+weatherAnswer[2]+" 입니다.")
 		logDB(str(update.message.text),"날씨 데이터 조회 ",update.message.from_user.id)
-
-	else:
-		bot.send_message(update.message.chat_id,"현재 날씨 조회 불가능")
-		logDB(str(update.message.text),"날씨 조회 거절",update.message.from_user.id)
+	except:
+		bot.send_message(update.message.chat_id,"날씨 데이터 조회 중 에러 발생")
+		logDB(str(update.message.text),"날씨 데이터 조회 실패",update.message.from_user.id)
 
 def logDB(command,answer,commandUser):
 	
@@ -107,6 +98,30 @@ def logDB(command,answer,commandUser):
 	conn.commit()
 	conn.close()
 
+def weatherData(isInit):
+	global tempData
+	global dustData
+	if isInit == False:
+		if tempData == "" or dustData == "":
+			tmp = weatherParser()
+			tempData = tmp[0]
+			dustData = tmp[1]
+			threading.Timer(dataCashingTime,weatherData,[True]).start()
+			return(tempData[0].text,dustData[0].text,dustData[1].text)
+
+		else:
+			return(tempData[0].text,dustData[0].text,dustData[1].text)
+
+	else:
+		tempData = ""
+		dustData = ""
+
+def weatherParser():
+	naverWeatherResponse = requests.get(naverWeatherURL)
+	naverWeatherData = BeautifulSoup(naverWeatherResponse.text,'html.parser')
+	tempData = naverWeatherData.select("span.todaytemp")
+	dustData = naverWeatherData.select("dl.indicator dd")
+	return(tempData,dustData)
 
 #updater.dispatcher.add_handler(MessageHandler(Filters.text, get_message))
 #updater.dispatcher.add_handler(MessageHandler(Filters.chat(adminID[0]), getAdmin))
