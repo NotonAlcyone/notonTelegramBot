@@ -1,4 +1,5 @@
 from telegram.ext import *
+#import telegram
 from privateData import *
 from bs4 import BeautifulSoup
 import random
@@ -7,10 +8,13 @@ import time
 import requests
 import json
 import threading
+import datetime
 
 updater = Updater(botToken)
 tempData = ""
 dustData = ""
+
+#bot = telegram.Bot(token = botToken)
 
 """
 def get_message(bot, update) : #echo
@@ -122,6 +126,20 @@ def weatherParser():
 	tempData = naverWeatherData.select("span.todaytemp")
 	dustData = naverWeatherData.select("dl.indicator dd")
 	return(tempData,dustData)
+
+
+
+def callBackDaily(bot, job):
+	print("am i call?")
+	bot.send_message(adminID[0],"좋은 아침입니다. 결핵약 챙겨드시고, 하루 일과를 확인해주세요.")
+
+
+try:
+	#datetime.datetime.strptime('10:53', '%H:%M').time()
+	j = updater.job_queue.run_daily(callBackDaily, time = datetime.datetime.strptime('11:02', '%H:%M').time() ) #서버시간 UTC임 아아아아아아ㅏ악
+	print("wow it work!")
+except Exception as ex:
+	print("Error",ex)
 
 #updater.dispatcher.add_handler(MessageHandler(Filters.text, get_message))
 #updater.dispatcher.add_handler(MessageHandler(Filters.chat(adminID[0]), getAdmin))
