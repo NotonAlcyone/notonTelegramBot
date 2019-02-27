@@ -140,4 +140,4 @@ $RECYCLE.BIN/
 
 # Private Data
 privateData.py
-log.db
+*.db

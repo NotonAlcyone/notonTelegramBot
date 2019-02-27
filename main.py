@@ -12,6 +12,7 @@ import datetime
 updater = Updater(botToken) #업데이트 함수에 봇 토큰 저장
 tempData = ""
 dustData = ""
+jobQueue = None
 
 #bot = telegram.Bot(token = botToken)
 
@@ -32,6 +33,13 @@ def get_message(bot, update) : #echo
 def getAdmin(bot,update): # admin answer
 	update.message.reply_text("adminSay")
 """
+def dbInit():
+	con = sqlite3.connect("player.db")
+	cursor = con.cursor()
+	cursor.execute('CREATE TABLE IF NOT EXISTS chatMorningCallList("index" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"chatNumber"INTEGER NOT NULL,"morningCallTime"TEXT,"morningCallText"TEXT)')
+	cursor.execute('CREATE TABLE IF NOT EXISTS chatUTCData("chatID" INTEGER NOT NULL PRIMARY KEY, "utcData" INTEGER)')
+	con.close()
+
 def helpCMD(bot,update): #/help 명령어 입력시 작동되는 함수
 	update.message.reply_text("Private Bot System For NotonAlcyone")
 	print(update.message.from_user.first_name)
@@ -78,10 +86,11 @@ def logCMD(bot,update):  #/log 명렁어 입력시 작동되는 함수
 
 def weatherCMD(bot,update):
 	try:
-		weatherAnswer = weatherData(False) :#weatherData에 데이터 요청
+		weatherAnswer = weatherData(False)#weatherData에 데이터 요청
 		bot.send_message(update.message.chat_id,"현재 서울 기온은 "+weatherAnswer[0] +"℃ 입니다.\n"+"미세먼지: "+weatherAnswer[1]+" 입니다."+"\n초미세먼지: "+weatherAnswer[2]+" 입니다.")
 		logDB(str(update.message.text),"날씨 데이터 조회 ",update.message.from_user.id)
-	except:#파싱중 오류 발생시 출력
+	except:
+	#파싱중 오류 발생시 출력
 		bot.send_message(update.message.chat_id,"날씨 데이터 조회 중 에러 발생")
 		logDB(str(update.message.text),"날씨 데이터 조회 실패",update.message.from_user.id)
 
@@ -127,34 +136,76 @@ def weatherParser():#네이버 날씨 파싱
 	return(tempData,dustData)
 
 
+def getDBData(dbName,query):
+	con = sqlite3.connect(dbName)
+	cursor = con.cursor()
 
+def insertDBData(dbName,query,insertData):
+	con = sqlite3.connect(dbName)
+	cursor = con.cursor()
+	cursor.execute(query,insertData)
+	con.commit()
+	con.close()
+
+def addBotCallCMD(bot,update):
+	try:
+		callData = update.message.text.split()
+		callTime = datetime.datetime.strptime(callData[1], '%H:%M') #1차 변환 시도
+		callText = ""
+		for i in range(2, len(callData)):
+			callText += str(callData[i]) + " "
+		insertDBData("player.db","INSERT INTO chatMorningCallList  VALUES(?,?,?,?)",(None,update.message.chat.id,callData[1],callText))
+		insertDBData("player.db","INSERT OR IGNORE INTO chatUTCData VALUES(?,?)",(update.message.chat.id,0)) #UTC값 db 전송
+		
+		bot.send_message(update.message.chat_id,"정상적으로 Call이 등록되었습니다.")
+		logDB(str(update.message.text),"Call 등록 성공",update.message.from_user.id)
+	except:
+		bot.send_message(update.message.chat_id,"Call 등록 실패")
+		logDB(str(update.message.text),"Call 등록 실패",update.message.from_user.id)
+
+
+
+
+"""
 def callBackDaily(bot, job):
 	print("am i call?")
-	bot.send_message(adminID[0],"좋은 아침입니다. 결핵약 챙겨드시고, 하루 일과를 확인해주세요.")
+	print(job.name)
+	#job.schedule_removal()
+	#test(job)
+	#bot.send_message(adminID[0],"좋은 아침입니다. 결핵약 챙겨드시고, 하루 일과를 확인해주세요.")
 
+def test(bot, job):
+	job.job_queue.get_jobs_by_name("15151")[0].schedule_removal()
 
-def addMorningCall():
+	print("jobjob")
+"""
+#def addMorningCall():
 
-def deleteMorningCall():
+#def deleteMorningCall():
 
-def loadMorningCall(isAll):
-	#전체 로드랑, ADD모닝콜에서 왔을때 분리
+#def loadMorningCall(isAll):
+	#시작할때 전체 로드랑, ADD모닝콜에서 왔을때 맨 마지막거 로드
 
-j = updater.job_queue.run_daily(callBackDaily, time = datetime.datetime.strptime('11:02', '%H:%M').time() ) #서버시간 UTC임 아아아아아아ㅏ악
+#j = updater.job_queue.run_daily(callBackDaily, time = datetime.datetime.strptime('23:00', '%H:%M').time() ) #서버시간 UTC임 아아아아아아ㅏ악
+#j = updater.job_queue.run_repeating(callBackDaily, interval = 3, name = "15151")
+#j = updater.job_queue.run_repeating(test, interval = 3, name = "131313")
 
 
 #updater.dispatcher.add_handler(MessageHandler(Filters.text, get_message))
 #updater.dispatcher.add_handler(MessageHandler(Filters.chat(adminID[0]), getAdmin))
+dbInit()
 cmdHelp = CommandHandler(["help","HELP"],helpCMD)
 cmdDice = CommandHandler(["dice","DICE"],diceCMD)
 cmdSelect = CommandHandler(["select","Select"],selectCMD)
 cmdWeather = CommandHandler(["weather","Weather"],weatherCMD)
 cmdLog = CommandHandler(["log","LOG"],logCMD)
+cmdAddCall = CommandHandler("addCall",addBotCallCMD)
 updater.dispatcher.add_handler(cmdHelp)
 updater.dispatcher.add_handler(cmdDice)
 updater.dispatcher.add_handler(cmdSelect)
 updater.dispatcher.add_handler(cmdLog)
 updater.dispatcher.add_handler(cmdWeather)
+updater.dispatcher.add_handler(cmdAddCall)
 
 updater.start_polling(timeout=3, clean=True)
 updater.idle()
