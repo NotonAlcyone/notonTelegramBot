@@ -36,7 +36,7 @@ def getAdmin(bot,update): # admin answer
 def dbInit():
 	con = sqlite3.connect("player.db")
 	cursor = con.cursor()
-	cursor.execute('CREATE TABLE IF NOT EXISTS chatMorningCallList("index" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"chatNumber"INTEGER NOT NULL,"morningCallTime"TEXT,"morningCallText"TEXT)')
+	cursor.execute('CREATE TABLE IF NOT EXISTS chatMorningCallList("callIndex" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"chatNumber"INTEGER NOT NULL,"morningCallTime"TEXT,"morningCallText"TEXT)')
 	cursor.execute('CREATE TABLE IF NOT EXISTS chatUTCData("chatID" INTEGER NOT NULL PRIMARY KEY, "utcData" INTEGER)')
 	con.close()
 
@@ -136,9 +136,17 @@ def weatherParser():#네이버 날씨 파싱
 	return(tempData,dustData)
 
 
-def getDBData(dbName,query):
+def getDBData(isWhere,dbName,query,insertData = None):
 	con = sqlite3.connect(dbName)
 	cursor = con.cursor()
+	if isWhere == True:
+		cursor.execute(query,insertData)
+		returnData = cursor.fetchall()
+	else:
+		cursor.execute(query)
+		returnData = cursor.fetchall()
+	con.close()
+	return returnData
 
 def insertDBData(dbName,query,insertData):
 	con = sqlite3.connect(dbName)
@@ -156,7 +164,9 @@ def addBotCallCMD(bot,update):
 			callText += str(callData[i]) + " "
 		insertDBData("player.db","INSERT INTO chatMorningCallList  VALUES(?,?,?,?)",(None,update.message.chat.id,callData[1],callText))
 		insertDBData("player.db","INSERT OR IGNORE INTO chatUTCData VALUES(?,?)",(update.message.chat.id,0)) #UTC값 db 전송
-		
+		#print(getDBData(False,"player.db","SELECT callIndex FROM chatMorningCallList order by callIndex desc limit 1")[0][0])
+		addJob(getDBData(False,"player.db","SELECT callIndex FROM chatMorningCallList order by callIndex desc limit 1")[0][0])
+
 		bot.send_message(update.message.chat_id,"정상적으로 Call이 등록되었습니다.")
 		logDB(str(update.message.text),"Call 등록 성공",update.message.from_user.id)
 	except:
@@ -164,7 +174,22 @@ def addBotCallCMD(bot,update):
 		logDB(str(update.message.text),"Call 등록 실패",update.message.from_user.id)
 
 
+def addJob(jobDBIndex):
+	global jobQueue
+	insertData = (jobDBIndex,)
+	DBdata = getDBData(True,"player.db", "SELECT chatNumber, morningCallTime  FROM chatMorningCallList WHERE callIndex = ? ",insertData)
+	chatNumber = (DBdata[0][0],)
+	morningCallTime = datetime.datetime.strptime(DBdata[0][1], '%H:%M')
+	print(morningCallTime)
+	chatUTC = getDBData(True,"player.db","SELECT utcData FROM chatUTCData where chatID = ?",chatNumber)
+	messageTime = morningCallTime - datetime.timedelta(hours= chatUTC[0][0])
 
+	print(messageTime.time())
+	jobQueue = updater.job_queue.run_daily(exeJob,time = messageTime.time() ,name = jobDBIndex)
+
+def exeJob(bot, job):
+	print("job call")
+	print(job.name)
 
 """
 def callBackDaily(bot, job):
