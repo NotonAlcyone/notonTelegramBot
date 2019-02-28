@@ -141,3 +141,4 @@ $RECYCLE.BIN/
 # Private Data
 privateData.py
 *.db
+.idea/

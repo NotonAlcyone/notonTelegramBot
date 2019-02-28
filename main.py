@@ -9,18 +9,18 @@ import json
 import threading
 import datetime
 
-updater = Updater(botToken) #업데이트 함수에 봇 토큰 저장
+updater = Updater(botToken)  # 업데이트 함수에 봇 토큰 저장
 tempData = ""
 dustData = ""
 jobQueue = None
 
-#bot = telegram.Bot(token = botToken)
+# bot = telegram.Bot(token = botToken)
 
 """
 def get_message(bot, update) : #echo
 	if update.message.chat.id in adminID:
 		print(update.message.text)
-		update.message.reply_text(update.message.text) #에코 데이터\
+		update.message.reply_text(update.message.text) #에코 데이터
 
 	else:
 		print("---------Warn---------")
@@ -36,44 +36,43 @@ def getAdmin(bot,update): # admin answer
 def dbInit():
 	con = sqlite3.connect("player.db")
 	cursor = con.cursor()
-	cursor.execute('CREATE TABLE IF NOT EXISTS chatMorningCallList("callIndex" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"chatNumber"INTEGER NOT NULL,"morningCallTime"TEXT,"morningCallText"TEXT)')
+	cursor.execute('CREATE TABLE IF NOT EXISTS chatMorningCallList("callIndex" INTEGER NOT NULL PRIMARY KEY ,"chatNumber"INTEGER NOT NULL,"morningCallTime"TEXT,"morningCallText"TEXT)')
 	cursor.execute('CREATE TABLE IF NOT EXISTS chatUTCData("chatID" INTEGER NOT NULL PRIMARY KEY, "utcData" INTEGER)')
 	con.close()
 
-def helpCMD(bot,update): #/help 명령어 입력시 작동되는 함수
+def helpCMD(bot, update):  # /help 명령어 입력시 작동되는 함수
 	update.message.reply_text("Private Bot System For NotonAlcyone")
 	print(update.message.from_user.first_name)
-	logDB(str(update.message.text),"Return",update.message.from_user.id)
+	logDB(str(update.message.text), "Return", update.message.from_user.id)
 
-def diceCMD(bot,update): #/dice 명령어 입력시 작동되는 함수
-	randNum = random.randrange(1,999) #1~999까지 랜덤 작동
+def diceCMD(bot, update):  # /dice 명령어 입력시 작동되는 함수
+	randNum = random.randrange(1, 999)  # 1~999까지 랜덤 작동
 	print(update.message.from_user.first_name)
-	if randNum % 10 in [0,1,3,6,7,8]: #랜덤값의 마지막 자리에 따라서 조사 이,가 를 결정해줌
+	if randNum % 10 in [0, 1, 3, 6, 7, 8]: # 랜덤값의 마지막 자리에 따라서 조사 이,가 를 결정해줌
 		postPostion = "이"
 	else:
 		postPostion = "가"
-	bot.send_message(update.message.chat_id,update.message.from_user.first_name + "님께서 주사위를 굴려 🎲" +str(randNum)+ postPostion +" 나왔습니다")
-	logDB(str(update.message.text),str(randNum),update.message.from_user.id) #로그 저장
-	#update.message.reply_text(tmpDef.first_name+" "+tmpDef.last_name+ "님께서 주사위를 굴려 🎲" +str(randNum)+ postPostion +" 나왔습니다") 
+	bot.send_message(update.message.chat_id, update.message.from_user.first_name + "님께서 주사위를 굴려 🎲" + str(randNum)+ postPostion + " 나왔습니다")
+	logDB(str(update.message.text), str(randNum), update.message.from_user.id)  # 로그 저장
 
-def selectCMD(bot, update): #/select 명령어 입력시 작동되는 함수
-	afterData = update.message.text.split() #입력된 데이터 분리
-	if len(afterData) == 1: #argument 입력이 없는 경우
+def selectCMD(bot, update): # /select 명령어 입력시 작동되는 함수
+	afterData = update.message.text.split()  # 입력된 데이터 분리
+	if len(afterData) == 1:  # argument 입력이 없는 경우
 		bot.send_message(update.message.chat_id,"wrongMessage Input")
 		logDB(str(update.message.text),"Select Fail",update.message.from_user.id)
 
-	else: #argument 입력이 있는 경우 해당 중 1개 선택
+	else: # argument 입력이 있는 경우 해당 중 1개 선택
 		tmpData = afterData[random.randrange(1,len(afterData))]
 		bot.send_message(update.message.chat_id,tmpData)
-		logDB(str(update.message.text),tmpData,update.message.from_user.id)
+		logDB(str(update.message.text), tmpData, update.message.from_user.id)
 
-def logCMD(bot,update):  #/log 명렁어 입력시 작동되는 함수
-	if update.message.from_user.id in adminID: #입력자가 admin일 경우에만 출력
+def logCMD (bot, update):  # /log 명렁어 입력시 작동되는 함수
+	if update.message.from_user.id in adminID: # 입력자가 admin일 경우에만 출력
 		conn = sqlite3.connect("log.db")
 		cursor = conn.cursor()	
 		cursor.execute("SELECT * FROM commandLog ORDER BY commandServerTime DESC Limit 10") #로그 기록 시간 기준으로 내림차순 정렬해서 10개를 출력
 		logData = cursor.fetchall()
-		logData.reverse() #가장 최근데이터가 상위에 있으므로, 보기 편하게 리버스 
+		logData.reverse() # 가장 최근데이터가 상위에 있으므로, 보기 편하게 리버스
 		lineBreakData = ""
 		for i in range(0,10):
 			lineBreakData += str(logData[i]) + " \n"
@@ -84,7 +83,7 @@ def logCMD(bot,update):  #/log 명렁어 입력시 작동되는 함수
 		logDB(str(update.message.text),"log Request rejected",update.message.from_user.id)
 	
 
-def weatherCMD(bot,update):
+def weatherCMD(bot, update):
 	try:
 		weatherAnswer = weatherData(False)#weatherData에 데이터 요청
 		bot.send_message(update.message.chat_id,"현재 서울 기온은 "+weatherAnswer[0] +"℃ 입니다.\n"+"미세먼지: "+weatherAnswer[1]+" 입니다."+"\n초미세먼지: "+weatherAnswer[2]+" 입니다.")
@@ -114,11 +113,11 @@ def weatherData(isInit):
 	global tempData
 	global dustData
 	if isInit == False:
-		if tempData == "" or dustData == "": #초기화 콜이 아니고, 데이터가 비어있을때 파싱
+		if tempData == "" or dustData == "": # 초기화 콜이 아니고, 데이터가 비어있을때 파싱
 			tmp = weatherParser()
 			tempData = tmp[0]
 			dustData = tmp[1]
-			threading.Timer(dataCashingTime,weatherData,[True]).start() #캐싱 타임 이후 캐싱데이터 초기화
+			threading.Timer(dataCashingTime, weatherData,[True]).start() #캐싱 타임 이후 캐싱데이터 초기화
 			return(tempData[0].text,dustData[0].text,dustData[1].text)
 
 		else:
@@ -148,10 +147,10 @@ def getDBData(isWhere,dbName,query,insertData = None):
 	con.close()
 	return returnData
 
-def insertDBData(dbName,query,insertData):
+def insertDBData(dbName, query, insertData):
 	con = sqlite3.connect(dbName)
 	cursor = con.cursor()
-	cursor.execute(query,insertData)
+	cursor.execute(query, insertData)
 	con.commit()
 	con.close()
 
@@ -162,17 +161,16 @@ def addBotCallCMD(bot,update):
 		callText = ""
 		for i in range(2, len(callData)):
 			callText += str(callData[i]) + " "
-		insertDBData("player.db","INSERT INTO chatMorningCallList  VALUES(?,?,?,?)",(None,update.message.chat.id,callData[1],callText))
-		insertDBData("player.db","INSERT OR IGNORE INTO chatUTCData VALUES(?,?)",(update.message.chat.id,0)) #UTC값 db 전송
-		#print(getDBData(False,"player.db","SELECT callIndex FROM chatMorningCallList order by callIndex desc limit 1")[0][0])
-		addJob(getDBData(False,"player.db","SELECT callIndex FROM chatMorningCallList order by callIndex desc limit 1")[0][0])
+		insertDBData("player.db", "INSERT INTO chatMorningCallList  VALUES(?,?,?,?)", (update.update_id, update.message.chat.id, callData[1], callText))
+		insertDBData("player.db", "INSERT OR IGNORE INTO chatUTCData VALUES(?,?)", (update.message.chat.id, 0))  # UTC값 db 전송
+		# print(getDBData(False,"player.db","SELECT callIndex FROM chatMorningCallList order by callIndex desc limit 1")[0][0])
+		addJob(update.update_id)
 
 		bot.send_message(update.message.chat_id,"정상적으로 Call이 등록되었습니다.")
 		logDB(str(update.message.text),"Call 등록 성공",update.message.from_user.id)
 	except:
 		bot.send_message(update.message.chat_id,"Call 등록 실패")
 		logDB(str(update.message.text),"Call 등록 실패",update.message.from_user.id)
-
 
 def addJob(jobDBIndex):
 	global jobQueue
@@ -185,7 +183,17 @@ def addJob(jobDBIndex):
 	messageTime = morningCallTime - datetime.timedelta(hours= chatUTC[0][0])
 
 	print(messageTime.time())
-	jobQueue = updater.job_queue.run_daily(exeJob,time = messageTime.time() ,name = jobDBIndex)
+	jobQueue = updater.job_queue.run_daily(exeJob,time = messageTime.time() ,name = str(jobDBIndex))
+
+def delete_job(jobname, isHardDel):
+	global jobQueue
+	try:
+		if isHardDel == True:
+			insertDBData("player.db","DELETE FROM chatMorningCallList where callIndex = ?",(jobname,))
+		jobQueue.job_queue.get_jobs_by_name(str(jobname))[0].schedule_removal()
+	except:
+		print("삭제 실패")
+		print(jobname)
 
 def exeJob(bot, job):
 	insertData = (job.name,)
@@ -194,7 +202,32 @@ def exeJob(bot, job):
 	callID = callData[0][0]
 	print("job call")
 	print(job.name)
-	bot.send_message(callID,callText)
+	bot.send_message(callID, callText)
+
+def cmd_del_call(bot,update):
+	delList = getDBData(True,"player.db","SELECT callIndex From chatMorningCallList where chatNumber = ?",(update.message.chat_id,))
+	for i in range(0,len(delList)):
+		delete_job(delList[i][0],True)
+
+
+def cmd_set_utc(bot, update):
+	utcSetData = update.message.text.split()
+	print(utcSetData[1])
+	try:
+		if int(utcSetData[1]) in range(-12,14):
+			utcUpdate = (update.message.chat.id,utcSetData[1])
+			insertDBData("player.db","INSERT OR REPLACE INTO chatUTCData VALUES(?,?)",utcUpdate)
+			#delList = getDBData(True,"player.db","SELECT callIndex From chatMorningCallList where chatNumber = ?",(update.message.chat_id,))
+			#for i in range(0,len(delList)):
+			#	delete_job(delList[i][0],False)
+			#for i in range(0,len(delList)):
+			#	addJob(delList[i][0])
+
+		else:
+			bot.send_message(update.message.chat_id,"UTC 범위(-12~14) 의 숫자가 아닙니다.")
+	except:
+		bot.send_message(update.message.chat_id,"잘못된 입력입니다.")
+
 
 
 # call 목록 불러오기 
@@ -236,12 +269,16 @@ cmdSelect = CommandHandler(["select","Select"],selectCMD)
 cmdWeather = CommandHandler(["weather","Weather"],weatherCMD)
 cmdLog = CommandHandler(["log","LOG"],logCMD)
 cmdAddCall = CommandHandler("addCall",addBotCallCMD)
+cmdSetUtc = CommandHandler("setUTC",cmd_set_utc)
+cmdDelJob = CommandHandler("delCall",cmd_del_call)
 updater.dispatcher.add_handler(cmdHelp)
 updater.dispatcher.add_handler(cmdDice)
 updater.dispatcher.add_handler(cmdSelect)
 updater.dispatcher.add_handler(cmdLog)
 updater.dispatcher.add_handler(cmdWeather)
 updater.dispatcher.add_handler(cmdAddCall)
+updater.dispatcher.add_handler(cmdSetUtc)
+updater.dispatcher.add_handler(cmdDelJob)
 
 updater.start_polling(timeout=3, clean=True)
 updater.idle()
