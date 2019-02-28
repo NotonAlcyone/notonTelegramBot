@@ -188,9 +188,20 @@ def addJob(jobDBIndex):
 	jobQueue = updater.job_queue.run_daily(exeJob,time = messageTime.time() ,name = jobDBIndex)
 
 def exeJob(bot, job):
+	insertData = (job.name,)
+	callData = getDBData(True,"player.db", "SELECT chatNumber, morningCallText FROM chatMorningCallList WHERE callIndex = ? ",insertData)
+	callText = callData[0][1]
+	callID = callData[0][0]
 	print("job call")
 	print(job.name)
+	bot.send_message(callID,callText)
 
+
+# call 목록 불러오기 
+# call 삭제 (DB 삭제 + 현재 액티브 삭제)
+# UTC 세팅
+# 콜 이니셜라이저
+#
 """
 def callBackDaily(bot, job):
 	print("am i call?")
