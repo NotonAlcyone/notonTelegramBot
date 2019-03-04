@@ -45,6 +45,14 @@ def db_init():
 	cursor.execute('CREATE TABLE IF NOT EXISTS chatUTCData("chatID" INTEGER NOT NULL PRIMARY KEY, "utcData" INTEGER)')
 	con.close()
 
+def call_init():
+	init_list = db_get_data(
+		False,
+		"player.db",
+		"SELECT callIndex From chatMorningCallList"
+	)
+	for i in range(0, len(init_list)):
+		job_add(init_list[i][0])
 
 def cmd_help(bot, update):  # /help 명령어 입력시 작동되는 함수
 	update.message.reply_text("Private Bot System For NotonAlcyone")
@@ -215,10 +223,11 @@ def job_add(job_index):
 	call_time = datetime.datetime.strptime(db_data[0][1], '%H:%M')
 	print(call_time)
 	chat_utc = db_get_data(True, "player.db", "SELECT utcData FROM chatUTCData where chatID = ?", chat_number)
-	message_time = call_time - datetime.timedelta(hours= chat_utc[0][0])
+	message_time = call_time - datetime.timedelta(hours=chat_utc[0][0])
 
 	print(message_time.time())
 	jobQueue = updater.job_queue.run_daily(job_exe, time=message_time.time(), name=str(job_index))
+	print("job add to queue")
 
 
 def delete_job(job_name, is_hard_delete):
@@ -233,8 +242,13 @@ def delete_job(job_name, is_hard_delete):
 
 
 def job_exe(bot, job):
+	print("job is work")
 	insert_data = (job.name,)
-	call_data = db_get_data(True, "player.db", "SELECT chatNumber,morningCallText FROM chatMorningCallList WHERE callIndex = ? ", insert_data)
+	call_data = db_get_data(
+		True,
+		"player.db", "SELECT chatNumber,morningCallText FROM chatMorningCallList WHERE callIndex = ? ",
+		insert_data
+	)
 	call_text = call_data[0][1]
 	call_id = call_data[0][0]
 	print("job call")
@@ -243,35 +257,62 @@ def job_exe(bot, job):
 
 
 def cmd_del_call(bot, update):
-	del_list = db_get_data(
-		True,
-		"player.db", "SELECT callIndex From chatMorningCallList where chatNumber = ?",
-		(update.message.chat_id,)
-	)
-	for i in range(0, len(del_list)):
-		delete_job(del_list[i][0], True)
+	input_text = update.message.text.split()
+	try:
+		del_call_index = int(input_text[1])
+		del_list = db_get_data(
+			True,
+			"player.db", "SELECT callIndex From chatMorningCallList where chatNumber = ? and callIndex = ?",
+			(update.message.chat_id, del_call_index,)
+		)
+		delete_job(del_list[0][0], True)
+		bot.send_message(update.message.chat_id, "삭제 완료")
+	except:
+		bot.send_message(update.message.chat_id, "del 형식 오류 이거나, 해당 챗에 없는 인덱스 값 입니다.")
 
 
 def cmd_set_utc(bot, update):
 	utc_set_data = update.message.text.split()
 	print(utc_set_data[1])
 	try:
-		if int(utc_set_data[1]) in range(-12,14):
-			utc_update = (update.message.chat.id,utc_set_data[1])
+		if int(utc_set_data[1]) in range(-12, 14):
+			utc_update = (update.message.chat.id, utc_set_data[1])
 			db_edit_data("player.db", "INSERT OR REPLACE INTO chatUTCData VALUES(?,?)", utc_update)
-			# delList = getDBData(
-			# True,"player.db","SELECT callIndex From chatMorningCallList where chatNumber = ?",
-			# (update.message.chat_id,)
-			# )
-			# for i in range(0,len(delList)):
-			# delete_job(delList[i][0],False)
-			# for i in range(0,len(delList)):
-			# addJob(delList[i][0])
+			re_add_list = db_get_data(
+				True,
+				"player.db",
+				"SELECT callIndex From chatMorningCallList where chatNumber = ?",
+				(update.message.chat_id,)
+			)
+			for i in range(0, len(re_add_list)):
+				delete_job(re_add_list[i][0], False)
+			for i in range(0, len(re_add_list)):
+				job_add(re_add_list[i][0])
 
 		else:
-			bot.send_message(update.message.chat_id,"UTC 범위(-12~14) 의 숫자가 아닙니다.")
+			bot.send_message(update.message.chat_id, "UTC 범위(-12~14) 의 숫자가 아닙니다.")
 	except:
-		bot.send_message(update.message.chat_id,"잘못된 입력입니다.")
+		bot.send_message(update.message.chat_id, "잘못된 입력입니다.")
+
+
+def cmd_call_list(bot, update):
+	call_list = db_get_data(
+		True,
+		"player.db", "SELECT * From chatMorningCallList where chatNumber = ?",
+		(update.message.chat_id,)
+	)
+	print(len(call_list))
+	call_list_after = ""
+	if len(call_list) is 0:
+		bot.send_message(update.message.chat_id, "설정한 Call이 존재하지 않습니다.")
+	else:
+		for i in range(0, len(call_list)):
+			call_list_after += str(call_list[i][0]) + " " + str(call_list[i][2]) + " " + str(call_list[i][3]) + "\n"
+
+		print(call_list_after)
+		bot.send_message(update.message.chat_id, call_list_after)
+
+
 
 
 # call 목록 불러오기
@@ -307,7 +348,9 @@ def test(bot, job):
 
 # updater.dispatcher.add_handler(MessageHandler(Filters.text, get_message))
 # updater.dispatcher.add_handler(MessageHandler(Filters.chat(adminID[0]), getAdmin))
+print(datetime.datetime.now())
 db_init()
+call_init()
 cmdHelp = CommandHandler(["help", "HELP"], cmd_help)
 cmdDice = CommandHandler(["dice", "DICE"], cmd_dice)
 cmdSelect = CommandHandler(["select", "Select"], cmd_select)
@@ -316,6 +359,7 @@ cmdLog = CommandHandler(["log", "LOG"], cmd_log)
 cmdAddCall = CommandHandler("addCall", cmd_add_daily_call)
 cmdSetUtc = CommandHandler("setUTC", cmd_set_utc)
 cmdDelJob = CommandHandler("delCall", cmd_del_call)
+cmdJobList = CommandHandler("callList", cmd_call_list)
 updater.dispatcher.add_handler(cmdHelp)
 updater.dispatcher.add_handler(cmdDice)
 updater.dispatcher.add_handler(cmdSelect)
@@ -324,6 +368,7 @@ updater.dispatcher.add_handler(cmdWeather)
 updater.dispatcher.add_handler(cmdAddCall)
 updater.dispatcher.add_handler(cmdSetUtc)
 updater.dispatcher.add_handler(cmdDelJob)
+updater.dispatcher.add_handler(cmdJobList)
 
 updater.start_polling(timeout=3, clean=True)
 updater.idle()
