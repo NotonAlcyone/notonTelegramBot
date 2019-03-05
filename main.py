@@ -204,7 +204,7 @@ def cmd_add_daily_call(bot, update):
 		# )
 		job_add(update.update_id)
 
-		bot.send_message(update.message.chat_id, "정상적으로 Call이 등록되었습니다.")
+		bot.send_message(update.message.chat_id, "정상적으로 등록되었습니다. UTC 설정도 확인해주세요")
 		db_logger(str(update.message.text), "Call 등록 성공", update.message.from_user.id)
 	except:
 		bot.send_message(update.message.chat_id, "Call 등록 실패")
@@ -288,7 +288,7 @@ def cmd_set_utc(bot, update):
 				delete_job(re_add_list[i][0], False)
 			for i in range(0, len(re_add_list)):
 				job_add(re_add_list[i][0])
-
+			bot.send_message(update.message.chat_id, "UTC 설정이 완료되었습니다.")
 		else:
 			bot.send_message(update.message.chat_id, "UTC 범위(-12~14) 의 숫자가 아닙니다.")
 	except:
@@ -311,9 +311,6 @@ def cmd_call_list(bot, update):
 
 		print(call_list_after)
 		bot.send_message(update.message.chat_id, call_list_after)
-
-
-
 
 # call 목록 불러오기
 # call 삭제 (DB 삭제 + 현재 액티브 삭제)
